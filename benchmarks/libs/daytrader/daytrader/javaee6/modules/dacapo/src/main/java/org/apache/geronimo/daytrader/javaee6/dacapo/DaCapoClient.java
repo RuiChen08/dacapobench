@@ -28,7 +28,6 @@ public class DaCapoClient {
 		boolean beans = false;
 		int numThreads = 64;
 		String size = "medium";
-
 		try {
 			for (int i = 0; i < args.length; i++) {
 				if ("-t".equals(args[i])) {
@@ -41,7 +40,6 @@ public class DaCapoClient {
 					beans = true;
 				}
 			}
-
 			if (initialize) {
 				DaCapoTrader.initializeTrade(size);
 			} else {

@@ -124,6 +124,7 @@ public class Search {
         i++;
       } else if ("-threads".equals(args[i])) {
         threads = Integer.parseInt(args[i + 1]);
+        org.dacapo.harness.Callback.setThreadCount(threads);
         i++;
       } else if ("-totalqueries".equals(args[i])) {
         totalQueries = Integer.parseInt(args[i + 1]);
@@ -179,9 +180,12 @@ public class Search {
     public void run() {
       try {
         int count = totalQueries / threadCount + (id < (totalQueries % threadCount) ? 1 : 0);
+        org.dacapo.harness.Callback.setTxCount(id, count);
         for (int i = 0, queryId = id; i < count; i++, queryId += threadCount) {
           // make and run query
+          org.dacapo.harness.Callback.starttx(id,i);
           new QueryProcessor(parent, name, queryId, index, outBase, queryBase, field, normsField, raw, hitsPerPage).run();
+          org.dacapo.harness.Callback.stoptx(id,i);
         }
       } catch (Exception e) {
         e.printStackTrace();
@@ -201,9 +205,11 @@ public class Search {
     IndexSearcher searcher;
     BufferedReader in;
     PrintWriter out;
+    int id;
 
     public QueryProcessor(Search parent, String name, int id, String index, String outBase, String queryBase, String field, String normsField, boolean raw,
         int hitsPerPage) {
+      this.id = id;
       this.parent = parent;
       this.field = field;
       this.raw = raw;

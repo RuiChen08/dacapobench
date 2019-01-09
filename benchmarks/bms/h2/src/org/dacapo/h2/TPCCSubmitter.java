@@ -20,10 +20,12 @@
  */
 package org.dacapo.h2;
 
+
 import org.apache.derbyTesting.system.oe.client.Display;
 import org.apache.derbyTesting.system.oe.client.Operations;
 import org.apache.derbyTesting.system.oe.client.Submitter;
 import org.apache.derbyTesting.system.oe.util.OERandom;
+import java.lang.reflect.Method;
 
 /**
  * A TPC-C like Submitter that will execute a fixed number of transactions only
@@ -39,6 +41,7 @@ public class TPCCSubmitter extends Submitter {
   private final static int MAXIMUM_FAILURE_PERCENTAGE = 10;
 
   private static long globalSeed = 0;
+  private  int threadID;
 
   private OERandom rand;
   private TPCCReporter reporter;
@@ -53,29 +56,41 @@ public class TPCCSubmitter extends Submitter {
     return result;
   }
 
-  public TPCCSubmitter(TPCCReporter reporter, Operations ops, OERandom rand, short maxW) {
+  public TPCCSubmitter(TPCCReporter reporter, Operations ops, OERandom rand, short maxW, int id) {
     super(null, ops, rand, maxW);
     this.rand = rand;
     this.reporter = reporter;
+    this.threadID = id;
   }
+
 
   @Override
   public long runTransactions(final Object displayData, final int count) throws Exception {
+
+    Class<?> clazz = Class.forName("org.dacapo.harness.Callback",true, ClassLoader.getSystemClassLoader());
+    Method setTxCount = clazz.getMethod("setTxCount", int.class, int.class);
+    Method starttx = clazz.getMethod("starttx", int.class, int.class);
+    Method stoptx = clazz.getMethod("stoptx", int.class, int.class);
+    setTxCount.invoke(null, threadID, count);
     for (int i = 0; i < count; i++) {
       rand.setSeed(getNextSeed());
-
       int txType = getTransactionType();
       boolean success = false;
-      while (!success) {
         try {
-          success = runTransaction(txType, displayData);
-        } catch (Exception e) {
+          starttx.invoke(null,threadID,i);
+          while (!success) {
+            try {
+              success = runTransaction(txType, displayData);
+            } catch (Exception e) {
+            }
+          }
+          stoptx.invoke(null,threadID,i);
+          transactionCount[txType]++;
+        }catch (Exception e){
+          System.err.println(e);
         }
       }
-      transactionCount[txType]++;
       reporter.done();
-    }
-
     // timing is done elsewhere
     return 0;
   }
@@ -90,32 +105,34 @@ public class TPCCSubmitter extends Submitter {
   }
 
   private boolean runTransaction(final int txType, final Object displayData) throws Exception {
-    switch (txType) {
-    case Submitter.STOCK_LEVEL:
-      runStockLevel(displayData);
-      break;
-    case Submitter.ORDER_STATUS_BY_NAME:
-      runOrderStatus(displayData, true);
-      break;
-    case Submitter.ORDER_STATUS_BY_ID:
-      runOrderStatus(displayData, false);
-      break;
-    case Submitter.PAYMENT_BY_NAME:
-      runPayment(displayData, true);
-      break;
-    case Submitter.PAYMENT_BY_ID:
-      runPayment(displayData, false);
-      break;
-    case Submitter.DELIVERY_SCHEDULE:
-      runScheduleDelivery(displayData);
-      break;
-    case Submitter.NEW_ORDER:
-      runNewOrder(displayData, false);
-      break;
-    case Submitter.NEW_ORDER_ROLLBACK:
-      runNewOrder(displayData, true);
-      break;
-    }
+
+      switch (txType) {
+      case Submitter.STOCK_LEVEL:
+        runStockLevel(displayData);
+        break;
+      case Submitter.ORDER_STATUS_BY_NAME:
+        runOrderStatus(displayData, true);
+        break;
+      case Submitter.ORDER_STATUS_BY_ID:
+        runOrderStatus(displayData, false);
+        break;
+      case Submitter.PAYMENT_BY_NAME:
+        runPayment(displayData, true);
+        break;
+      case Submitter.PAYMENT_BY_ID:
+        runPayment(displayData, false);
+        break;
+      case Submitter.DELIVERY_SCHEDULE:
+        runScheduleDelivery(displayData);
+        break;
+      case Submitter.NEW_ORDER:
+        runNewOrder(displayData, false);
+        break;
+      case Submitter.NEW_ORDER_ROLLBACK:
+        runNewOrder(displayData, true);
+        break;
+      }
+
     return true;
   }
 

@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.List;
+import java.lang.reflect.Method;
 
 /**
  * A client of the tomcat benchmark.
@@ -113,7 +114,7 @@ public class Client implements Runnable {
   );
 
   /**
-   * A benchmark client, one per client thread.
+   * A benchmark client, one per cliencd t thread.
    * @param logDir Directory, destination for log files
    * @param ordinal A unique identifier for the client thread
    * @param pageCount # loops to perform
@@ -136,12 +137,20 @@ public class Client implements Runnable {
   public void run() {
     final Session session = Session.create(port);
     try {
+      Class<?> clazz = Class.forName("org.dacapo.harness.Callback", true, Thread.currentThread().getContextClassLoader());
+      Method method = clazz.getMethod("setTxCount", int.class, int.class);
+      Method starttx = clazz.getMethod("starttx", int.class, int.class);
+      Method stoptx = clazz.getMethod("stoptx", int.class, int.class);
+      method.invoke(null, ordinal, pageCount * (pages.size()));
       for (int i = 0; i < pageCount; i++) {
         for (int p = 0; p < pages.size(); p++) {
+          int tx = i*(pages.size())+p;
           Page page = pages.get(p);
           File logFile = new File(logDir, String.format("result.%d.%d.%d.html", ordinal, p, i));
+          starttx.invoke(null,ordinal,tx);
           boolean result = page.fetch(session, logFile, verbose);
           log.printf("%-50s, %s%n", page.getAddress(), result ? "success" : "fail");
+          stoptx.invoke(null,ordinal,tx);
         }
       }
     } catch (Exception e) {

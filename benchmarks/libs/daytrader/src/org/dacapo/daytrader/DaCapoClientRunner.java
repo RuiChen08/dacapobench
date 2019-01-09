@@ -14,8 +14,11 @@ import java.io.File;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
+
 import java.util.Set;
 import java.util.Collection;
+import java.lang.reflect.Method;
+import java.lang.ClassLoader;
 
 /**
  * date:  $Date: 2009-12-24 11:19:36 +1100 (Thu, 24 Dec 2009) $
@@ -30,13 +33,16 @@ public class DaCapoClientRunner {
     try {
 
       car = carName;
+      Class<?> clazz = Class.forName("org.dacapo.harness.Callback", true, ClassLoader.getSystemClassLoader());
+      Method setThreadCount = clazz.getMethod("setThreadCount", int.class);
+      setThreadCount.invoke(null, numThreads);
+
 
       /* Calling this function directly does not launch the client now. According to testing, it seems the getMain method of boot does not work properlly.
          Thus these ugly codes are temporarily used fot verifing that the whole framework works
          Will be changed once the problem is fixed
       */
       //ClientCLI.main(new String[] { car, "-i", "-t", numThreads + "", "-s", size, useBeans ? "-b" : "" });
-
 
       gero = System.getProperty("org.apache.geronimo.home.dir");
       String jhome= System.getProperty("java.home");
@@ -60,19 +66,18 @@ public class DaCapoClientRunner {
          Will be changed once the problem is fixed
       */
       //ClientCLI.main(new String[] { car, "-i", "-t", numThreads + "", "-s", size, useBeans ? "-b" : "" });
-
+      Class<?> clazz = Class.forName("org.dacapo.harness.Callback", true, ClassLoader.getSystemClassLoader());
+      Method setThreadCount = clazz.getMethod("setThreadCount", int.class);
+      setThreadCount.invoke(null, numThreads);
       String jhome= System.getProperty("java.home");
-
       ProcessBuilder pb = new ProcessBuilder(jhome + "/bin/java", "-jar", "-Dkaraf.startLocalConsole=false", gero + "/bin/client.jar", car, "-t", numThreads + "", "-s", size, useBeans ? "-b" : "");
       Process p = pb.start();
       p.waitFor();
-
       BufferedReader stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
       while (stdInput.ready()) { //While there's something in the buffer
         //read&print - replace with a buffered read (into an array) if the output doesn't contain CR/LF
         System.out.println(stdInput.readLine());
       }
-
     } catch (Exception e) {
       System.err.print("Exception running client iteration: " + e.toString());
       e.printStackTrace();

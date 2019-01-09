@@ -56,6 +56,7 @@ public class CommandLineArgs {
   public static final String RELEASE_NOTES = "RELEASE_NOTES.txt";
   public static final String DEFAULT_SIZE = "default";
   public static final String DEFAULT_SCRATCH_DIRECTORY = "./scratch";
+  public static final String DEFAULT_QUERY_FILE ="query-times.txt";
   public static final String DEFAULT_MAX_ITERATIONS = "20";
   public static final String DEFAULT_WINDOW_SIZE = "3";
   public static final String DEFAULT_VARIANCE = "3.0";
@@ -91,6 +92,8 @@ public class CommandLineArgs {
   private static final String OPT_THREAD_COUNT = "thread-count";
   private static final String OPT_THREAD_FACTOR = "thread-factor";
   private static final String OPT_TIMEOUT_DIALATION = "timeout-dialation";
+  private static final String OPT_QUERY_OUT = "query-out";
+  private static final String OPT_QUERY_FILE = "query-file";
 
   private static final Option[] OPTIONS = { 
     makeOption("c",  OPT_CALLBACK,            "Use class <callback> to bracket benchmark runs", "callback"),
@@ -111,7 +114,8 @@ public class CommandLineArgs {
     makeOption("t",  OPT_THREAD_COUNT,        "Set the thread count to drive the workload (mutually exclusive -k)", "thread_count"),
     makeOption("k",  OPT_THREAD_FACTOR,       "Set the number of threads per CPU to drive the workload (mutually exclusive with -t)", "thread_per_cpu"),
     makeOption("f",  OPT_TIMEOUT_DIALATION,   "Set the time dialation of the timeouts in the benchmark by the given integer factor.", "timeout_dialation"),
-    makeOption("v",  OPT_VERBOSE,             "Verbose output", null)
+    makeOption("v",  OPT_VERBOSE,             "Verbose output", null), makeOption("q",  OPT_QUERY_OUT,           "Print the times queries used",null),
+    makeOption("f",  OPT_QUERY_FILE,          "Specify a file <file-name> to store the output of queries","<file-name>")
   };
 
   private static CommandLineParser parser = new PosixParser();
@@ -168,6 +172,11 @@ public class CommandLineArgs {
     // configure the callback
     defineCallback();
 
+    if(line.hasOption(OPT_QUERY_OUT)){
+      this.callback.queryVerbose = true;
+    }
+
+
     // check that at least one or more benchmarks are specified or a
     // config file is specified but not both
     if (line.getArgList().isEmpty() && !line.hasOption(OPT_CONFIG)) {
@@ -208,6 +217,7 @@ public class CommandLineArgs {
         System.exit(EXIT_UNKNOWN_BENCHMARK);
       }
     }
+
   }
 
   /**
@@ -318,12 +328,23 @@ public class CommandLineArgs {
     return line.getOptionValue(OPT_SCRATCH_DIRECTORY, DEFAULT_SCRATCH_DIRECTORY);
   }
 
+  public String getQueryFile() {
+    return line.getOptionValue(OPT_QUERY_FILE, DEFAULT_QUERY_FILE);
+  }
+
+
+
   public Callback getCallback() {
     return callback;
   }
 
+
   public String getCnfOverride() {
     return line.getOptionValue(OPT_CONFIG, null);
+  }
+
+  public boolean getFile(){
+    return line.hasOption(OPT_QUERY_FILE);
   }
 
   public boolean getInformation() {

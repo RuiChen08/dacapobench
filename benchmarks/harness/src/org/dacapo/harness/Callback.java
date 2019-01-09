@@ -10,6 +10,12 @@ package org.dacapo.harness;
 
 import org.dacapo.harness.CommandLineArgs.Methodology;
 import org.dacapo.parser.Config;
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.io.IOException;
+import java.io.FileOutputStream;
+import java.io.File;
+
 
 /**
  * date:  $Date: 2009-12-24 11:19:36 +1100 (Thu, 24 Dec 2009) $
@@ -49,6 +55,16 @@ public class Callback {
   boolean verbose = false;
 
   /**
+   *print out all the times queries spend
+   */
+  boolean queryVerbose = false;
+
+  /**
+   *the file in which the query output will be
+   */
+  protected File queryFile;
+
+  /**
    * Create a new callback.
    * 
    * @param args The parsed command-line arguments.
@@ -83,6 +99,8 @@ public class Callback {
     if (times != null)
       for (int i = 0; i < times.length; i++)
         times[i] = 0;
+
+    this.queryFile = null;
   }
 
   /**
@@ -119,8 +137,10 @@ public class Callback {
         return false;
       }
 
+
       /* Maintain the sliding window of execution times */
       times[(iterations - 1) % args.getWindow()] = elapsed;
+
 
       /* If we haven't filled the window, repeat immediately */
       if (iterations < args.getWindow())
@@ -150,6 +170,16 @@ public class Callback {
     return mode == Mode.WARMUP;
   }
 
+  public void setQueryFile(File file) throws IOException{
+          this.queryFile = file;
+          if(!file.exists()){
+            if(!file.createNewFile())
+            {
+
+            }
+          }
+  }
+
   /**
    * Start the timer and announce the begining of an iteration
    */
@@ -161,6 +191,45 @@ public class Callback {
     System.err.print("===== DaCapo " + TestHarness.getBuildVersion() + " " + benchmark + " starting ");
     System.err.println((warmup ? ("warmup " + (iterations + 1) + " ") : "") + "=====");
     System.err.flush();
+  }
+
+  private static long[][] txstart;
+  private static long[][] txduration;
+  private static long[][] oldTxStart;
+  private static long[][] oldTxDuration;
+  private static boolean[] isExecuted;
+  public static void setThreadCount(int totalThreads){
+    txstart = new long[totalThreads][];
+    txduration = new long[totalThreads][];
+    oldTxStart = new long[totalThreads][];
+    oldTxDuration = new long[totalThreads][];
+    isExecuted = new boolean[totalThreads];
+  }
+
+  public static void setTxCount(int id, int txNum)throws ArrayIndexOutOfBoundsException{
+    if(isExecuted[id]){
+      oldTxDuration[id] = txduration[id].clone();
+      oldTxStart[id] = txstart[id].clone();
+      txstart[id] = new long[oldTxStart[id].length+txNum];
+      txduration[id] = new long[oldTxDuration[id].length+txNum];
+      for(int i = 0; i < oldTxDuration[id].length; i++){
+        txduration[id][i] = oldTxDuration[id][i];
+        txstart[id][i] = oldTxStart[id][i];
+      }
+    }else {
+      txstart[id] = new long[txNum];
+      txduration[id] = new long[txNum];
+      isExecuted[id] = true;
+    }
+
+  }
+
+  public static void starttx(int id, int count) throws ArrayIndexOutOfBoundsException {
+      txstart[id][count] = System.nanoTime();
+  }
+
+  public static void stoptx(int id, int count) throws ArrayIndexOutOfBoundsException {
+    txduration[id][count] = System.nanoTime() - txstart[id][count];
   }
 
   public void stop(long duration) {
@@ -177,10 +246,61 @@ public class Callback {
   };
 
   protected void complete(String benchmark, boolean valid, boolean warmup) {
+    if(txduration!=null) {
+      ArrayList<Long> times = new ArrayList<>();
+      boolean isThe1st = true;
+      String queryTimes = "query-times = [ ";
+      for(long [] txtimes: txduration){
+        if(txtimes!=null)
+          for(long txtime: txtimes) {
+
+            if(txtime!=0) {
+              if(isThe1st)
+                isThe1st = false;
+              else
+                queryTimes = queryTimes + ", ";
+              queryTimes = queryTimes + txtime;
+              times.add(txtime);
+            }
+          }
+      }
+      queryTimes = queryTimes + " ]";
+
+      long [] tmArray = times.stream().mapToLong(t->t.longValue()).toArray();
+      Arrays.sort(tmArray);
+
+      String pencentilesOutput = "===== Query percentiles 99: " + tmArray[(int) ((tmArray.length) * 0.99)]+" mrcsc, "+
+                "95: " + tmArray[(int) ((tmArray.length) * 0.95)]+" mcrsc, "+
+                "90: " + tmArray[(int) ((tmArray.length) * 0.90)]+" mcrsc, "+
+                "50: " + tmArray[(int) ((tmArray.length) * 0.50)]+" mcrsc =====\n";
+
+
+
+      if(queryFile!=null){
+        try {
+          FileOutputStream outputStream = new FileOutputStream(queryFile);
+
+          outputStream.write(pencentilesOutput.getBytes());
+
+          if (queryVerbose) {
+            outputStream.write(queryTimes.getBytes());
+          }
+          outputStream.flush();
+          outputStream.close();
+        }catch (IOException e){
+          System.out.println(e);
+        }
+      }else{
+        System.out.println(pencentilesOutput);
+        if(queryVerbose){
+          System.out.println(queryTimes);
+        }
+      }
+    }
     System.err.print("===== DaCapo " + TestHarness.getBuildVersion() + " " + benchmark);
     if (valid) {
       System.err.print(warmup ? (" completed warmup " + (iterations + 1) + " ") : " PASSED ");
-      System.err.print("in " + elapsed + " msec ");
+      System.err.print("in " + elapsed + " mesc ");
     } else {
       System.err.print(" FAILED " + (warmup ? "warmup " : ""));
     }
