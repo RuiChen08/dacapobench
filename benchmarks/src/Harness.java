@@ -29,7 +29,6 @@ public class Harness {
 
   public static void main(String[] args) throws Exception {
     ClassLoader harnessClassLoader = makeHarnessClassLoader();
-
     Thread.currentThread().setContextClassLoader(harnessClassLoader);
 
     Class dacapoHarnessClass = harnessClassLoader.loadClass(HARNESS_CLASS);
@@ -45,7 +44,6 @@ public class Harness {
     ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
     String dacapoCallbackClasspath = System
         .getProperty(CALLBACK_CLASSPATH_PROPERTY);
-
     URL harnessJarURL = classLoader.getResource(HARNESS_PATH);
 
     URL[] urls = null;
@@ -58,6 +56,7 @@ public class Harness {
         callbackClasspath = file.getAbsoluteFile().toURI();
       else
         callbackClasspath = new URI(dacapoCallbackClasspath);
+
 
       if (callbackClasspath == null)
         throw new URISyntaxException(dacapoCallbackClasspath, "is not a URI nor a directory nor a class file");

@@ -147,6 +147,7 @@ public abstract class Benchmark {
 
   protected Method method;
 
+
   /**
    * Run a benchmark. This is final because individual benchmarks should not
    * interfere with the flow of control.

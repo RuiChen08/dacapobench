@@ -59,7 +59,6 @@ public class H2 extends Benchmark {
           argMap.put(size,args);
           threadMap.put(size, Integer.toString(config.getThreadCount(size)));
       }
-      
       // construct the benchmark
       this.tpcc = this.makeTPCC.invoke(null, threadMap, argMap, scratch, getVerbose(), getPreserve());
     } finally {
@@ -95,6 +94,7 @@ public class H2 extends Benchmark {
   public void iterate(String size) throws Exception {
     useBenchmarkClassLoader();
     try {
+
       this.iterationTPCC.invoke(this.tpcc, size);
     } finally {
       revertClassLoader();

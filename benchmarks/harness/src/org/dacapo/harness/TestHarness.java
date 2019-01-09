@@ -82,6 +82,15 @@ public class TestHarness {
     System.setProperty("java.awt.headless", "true");
 
     setBuildInfo();  // set BuildVersion and BuildNickName.
+    if (BuildVersion.contains("git")) {
+      System.err.println(
+        "----------------------------------------------------------------\n" +
+        "WARNING: This is NOT a release build of the DaCapo suite.\n" +
+        "It has not been calibrated and must be used with great care.\n" +
+        "If you do use this build, be sure to cite the relevant git hash.\n" +
+        "----------------------------------------------------------------\n"
+      );
+    }
     try {
       commandLineArgs = new CommandLineArgs(args);
 
@@ -194,7 +203,11 @@ public class TestHarness {
 
     boolean valid = true;
     Callback callback = commandLineArgs.getCallback();
+
     callback.init(harness.config);
+
+    if(commandLineArgs.getFile())
+      callback.setQueryFile(new File("."+File.separator+commandLineArgs.getQueryFile()));
 
     do {
       valid = b.run(callback, commandLineArgs.getSize()) && valid;

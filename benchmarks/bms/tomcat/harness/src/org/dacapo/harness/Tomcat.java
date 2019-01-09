@@ -13,6 +13,7 @@ import java.lang.reflect.Constructor;
 
 import org.dacapo.harness.Benchmark;
 import org.dacapo.parser.Config;
+import java.lang.reflect.Method;
 
 /**
  * Benchmark harness for the Tomcat benchmark
@@ -101,7 +102,9 @@ public class Tomcat extends Benchmark {
      */
     final int iterationsPerClient = iterations / threadCount;
     final int oddIterations = iterations - (iterationsPerClient * threadCount);
-
+    Class<?> clazz = Class.forName("org.dacapo.harness.Callback",true, Thread.currentThread().getContextClassLoader());
+    Method setThreadCount = clazz.getMethod("setThreadCount", int.class);
+    setThreadCount.invoke(null,threadCount);
     final Thread[] threads = new Thread[threadCount];
     System.out.println("Creating client threads");
     for (int i = 0; i < threadCount; i++) {

@@ -42,6 +42,8 @@ import org.h2.tools.Backup;
 import org.h2.tools.Restore;
 import org.h2.tools.Script;
 
+import java.lang.reflect.Method;
+
 /**
  * date:  $Date: 2009-12-24 11:19:36 +1100 (Thu, 24 Dec 2009) $
  * id: $Id: TPCC.java 738 2009-12-24 00:19:36Z steveb-oss $
@@ -168,7 +170,6 @@ public class TPCC {
     // set up the transactions for each terminal
     final int iterationsPerClient = totalTransactions / numberOfTerminals;
     final int oddIterations = totalTransactions - (iterationsPerClient * numberOfTerminals);
-
     for (int i = 0; i < numberOfTerminals; i++)
       transactionsPerTerminal[i] = iterationsPerClient + (i < oddIterations ? 1 : 0);
   }
@@ -274,7 +275,7 @@ public class TPCC {
 
       Operations ops = new Standard(connections[i]);
 
-      submitters[i] = new TPCCSubmitter(reporter, ops, rands[i], scale);
+      submitters[i] = new TPCCSubmitter(reporter, ops, rands[i], scale,i);
     }
 
     preIterationTime = System.currentTimeMillis() - start;
@@ -287,6 +288,11 @@ public class TPCC {
     // run all the submitters. this is taken from
     // org.apache.derbyTesting.system.oe.client.MultiThreadSubmitter
     Thread[] threads = new Thread[submitters.length];
+
+    Class<?> clazz = Class.forName("org.dacapo.harness.Callback", true, ClassLoader.getSystemClassLoader());
+    Method setThreadCount = clazz.getMethod("setThreadCount", int.class);
+    setThreadCount.invoke(null, submitters.length);
+
     for (int i = 0; i < submitters.length; i++) {
       submitters[i].clearTransactionCount();
       threads[i] = newThread(i, submitters[i], transactionsPerTerminal[i]);
@@ -721,11 +727,11 @@ public class TPCC {
   }
 
   private static Thread newThread(final int threadId, final Submitter submitter, final int count) {
-    Thread t = new Thread("OE_Thread:" + threadId) {
 
+    Thread t = new Thread("OE_Thread:" + threadId) {
       public void run() {
         try {
-          submitter.runTransactions(null, count);
+            submitter.runTransactions(null, count);
         } catch (Exception e) {
           e.printStackTrace();
         }
