@@ -39,7 +39,12 @@ public class Zxing extends Benchmark{
   @Override
   public void iterate(String size){
     try {
-      String barcode = args[0];
+      String barcode = args[0] + File.separator + "dat";
+      if (System.getProperty("os.name").startsWith("Windows")) {
+        barcode = barcode.replace("\\", "/");
+        barcode = "file:/" + barcode;
+      }
+      System.out.println(barcode);
       // Complete the path of each barcode
       this.method.invoke(null, (Object) new String[] {"--recursive", barcode});
     } catch (Exception e){
